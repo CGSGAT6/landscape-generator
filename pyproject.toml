@@ -33,7 +33,7 @@ landscape-demo = "landscape.demo:demo"
 
 [tool.setuptools.packages.find]
 where = ["src"]   # вместо ["."]
-include = ["noise*", "geometry*", "app_base*", "renderer*", "landscape*", "app*"]
+include = ["noise*", "geometry*", "app_base*", "renderer*", "landscape*", "app*", "filepath*"]
 
 [tool.pytest.ini_options]
 testpaths = [

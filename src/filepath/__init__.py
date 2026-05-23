@@ -1,0 +1,1 @@
+from .paths import PROJECT_ROOT, ASSETS_DIR, OUTPUT_DIR, SRC_DIR
