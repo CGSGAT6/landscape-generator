@@ -39,6 +39,7 @@ include = ["noise*", "geometry*", "app_base*", "renderer*", "landscape*", "app*"
 testpaths = [
     "src/noise/tests",
     "src/geometry/tests",
+    "demo",
     "src/app_base/tests",
     "src/renderer/tests",
     "src/landscape/tests",
