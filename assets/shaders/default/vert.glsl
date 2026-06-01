@@ -23,9 +23,17 @@ layout(binding = 1, std430) buffer UBO_PRIM
 
 layout(binding = 3, std430) buffer UBO_CAMERA
 {
+/*
   mat4 MatrView;
   mat4 MatrProj;
   mat4 MatrVP;
+*/
+  mat4 MatrVP;
+  mat4 MatrView;
+  mat4 MatrProj;
+  //mat4 MatrShadow;
+  vec4 CamLoc4;
+  vec4 CamDir4;
 };
 
 /*

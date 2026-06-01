@@ -1,0 +1,27 @@
+
+newmtl mat_0-Body_dDo_d_orange.jpg
+Ka  0.1 0.1 0.1
+Kd  0.8 0.8 0.8
+Ks  0.8 0.8 0.8
+d  1.0
+Ns  30.0
+illum 2
+map_Kd textures/Body_dDo_d_orange.jpg
+
+newmtl mat_2-Interior_dDo_d_black.jpg
+Ka  0.1 0.1 0.1
+Kd  0.8 0.8 0.8
+Ks  0.8 0.8 0.8
+d  1.0
+Ns  30.0
+illum 2
+map_Kd textures/Interior_dDo_d_black.jpg
+
+newmtl mat_3-default-grey.jpg
+Ka  0.1 0.1 0.1
+Kd  0.8 0.8 0.8
+Ks  0.8 0.8 0.8
+d  1.0
+Ns  30.0
+illum 2
+map_Kd textures/internal_ground_ao_texture.jpeg 

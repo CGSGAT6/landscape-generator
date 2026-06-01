@@ -7,9 +7,12 @@ from .camera import Camera
 from .buffer import Buffer
 from .texture import Texture
 from .model import Model
+from .utils import *
+
 import numpy as np
 import moderngl
 import pyrr
+
 class RenderEngine:
     def __init__(self):
         self.ctx: moderngl.Context | None = None
@@ -24,7 +27,7 @@ class RenderEngine:
         self.height = 470
         
     PRIM_BUF_SIZE = 16 * 4 * 3
-    CAMERA_BUF_SIZE = 16 * 4 * 3
+    CAMERA_BUF_SIZE = 16 * (4 * 3 + 2)
     SYNC_BUF_SIZE = 4 * 4     
 
     def init(self):
@@ -74,10 +77,15 @@ class RenderEngine:
         self.ctx.gc()
     
     def _update_camera_buf(self):
-        camera_arr = np.array([self.camera.get_view_matrix(),
-                               self.camera.get_projection_matrix(),
-                               self.camera.get_vp_matrix()], dtype=np.float32)
-        self.camera_buf.write(camera_arr.tobytes())
+        
+        pos_padded = np.pad(self.camera._get_position(), (0, 1), mode='constant')  # [1,2,3,0]
+        forw_padded = np.pad(self.camera._get_forward(), (0, 1), mode='constant')
+        combined = np.concatenate([self.camera.get_vp_matrix().ravel(),
+                                   self.camera.get_view_matrix().ravel(),
+                                   self.camera.get_projection_matrix().ravel(), 
+                                   pos_padded, forw_padded], dtype=np.float32)
+
+        self.camera_buf.write(combined.tobytes())
     def _update_sync_buf(self):
         sync_arr = np.array([float(self.time), float(self.delta_time), float(self.width), float(self.height)], dtype=np.float32)
         

@@ -27,15 +27,19 @@ class TestWindow(mglw.WindowConfig):
         self.tr = self.renderer.create_prim(vertices=v,
                                             mtl=self.renderer.get_material("tex test",
                                                                            tex=[OUTPUT_DIR / "heightmap.png"]))
-        self.mdl = self.renderer.create_model(name="test model", file_path=OUTPUT_DIR/"landscape_delaunay_flat.obj")
+        self.mdl = self.renderer.create_model(name="test model", prims=[])
+        self.mdl.add_from_file(fname=OUTPUT_DIR/"OldCar/oldcar.obj", flat=False)
 
     def on_render(self, time, frame_time):
         self.renderer.begin_frame(time, frame_time)
         self.renderer.camera.orbit(30 * frame_time, 0)
         self.renderer._update_camera_buf()
+        
+        bb = (self.mdl.bbox_max + self.mdl.bbox_min) / 2
+
         #self.renderer.render_prim(self.tr, pyrr.Matrix44.from_x_rotation(2 * 3.14  * time))
         #self.mdl.set_matrix(idx=0, local_matrix=pyrr.Matrix44.from_x_rotation(2 * 3.14  * time))
-        self.mdl.render(pyrr.Matrix44.from_translation((0, 0, 0)))
+        self.mdl.render(pyrr.Matrix44.from_translation(-bb) * pyrr.Matrix44.from_scale((5, 5, 5)))
         self.renderer.end_frame()
 
     def on_resize(self, width: int, height: int):

@@ -21,6 +21,7 @@ class Primitive:
         self.noofv = int(vertices.nbytes / VERTEX_SIZE)
         if indeces is not None:
             self.noofi = int(indeces.nbytes / 4)
+        self._compute_bbox(vertices)
         self._update_buffers(vertices=vertices, indeces=indeces)
         self._update_vao()
 
@@ -71,6 +72,11 @@ class Primitive:
         if indeces is not None:
             self.ibuf = self.rnd.ctx.buffer(reserve=indeces.nbytes)
             self.ibuf.write(indeces.tobytes())
+    def _compute_bbox(self, vertices: np.ndarray):
+        pos = vertices.reshape(-1, 8)[:, :3]
+        self.bbox_min = pos.min(axis=0)
+        self.bbox_max = pos.max(axis=0)
+
     def _render(self):
         if not self.is_valid:
             return

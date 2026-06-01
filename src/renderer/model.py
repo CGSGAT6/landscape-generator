@@ -35,9 +35,12 @@ class Model:
     def __init__(self, rnd, prims=None, file_path=None):
         self.rnd = rnd
         self.prims = []
+        self.bbox_min = None
+        self.bbox_max = None
         if prims is not None:
             for p in prims:
                 self.prims.append((p, pyrr.Matrix44.identity()))
+            self.compute_bbox()
         elif file_path is not None:
             self.add_from_file(file_path)
 
@@ -168,11 +171,11 @@ class Model:
                     materials[current]['d'] = 1.0 - float(parts[1])
                 elif parts[0] == 'Tr':
                     materials[current]['d'] = float(parts[1])
-                elif parts[0] == 'map_Kd':
+                elif parts[0] == 'map_Kd' and len(parts) > 1 and parts[1].strip():
                     materials[current]['map_Kd'] = str(mtl_dir / parts[1])
-                elif parts[0] == 'map_Ka':
+                elif parts[0] == 'map_Ka' and len(parts) > 1 and parts[1].strip():
                     materials[current]['map_Ka'] = str(mtl_dir / parts[1])
-                elif parts[0] == 'map_Ks':
+                elif parts[0] == 'map_Ks' and len(parts) > 1 and parts[1].strip():
                     materials[current]['map_Ks'] = str(mtl_dir / parts[1])
 
         return materials
@@ -221,6 +224,10 @@ class Model:
         normals = np.array(normals, dtype=np.float32) if normals else np.empty((0, 3), dtype=np.float32)
         uvs = np.array(uvs, dtype=np.float32) if uvs else np.empty((0, 2), dtype=np.float32)
 
+        if len(positions) > 0:
+            self.bbox_min = positions.min(axis=0)
+            self.bbox_max = positions.max(axis=0)
+
         # ---- parse MTL ----
         mtl_data = {}
         if mtllib_path is not None:
@@ -257,6 +264,20 @@ class Model:
                 prim = self.rnd.create_prim(vertices=verts, indeces=idx, mtl=mtl_obj)
 
             self.prims.append((prim, pyrr.Matrix44.identity()))
+
+    # ---------------------------------------------------------------- bbox
+    def compute_bbox(self):
+        if not self.prims:
+            self.bbox_min = None
+            self.bbox_max = None
+            return
+        bmin = np.full(3, np.inf, dtype=np.float32)
+        bmax = np.full(3, -np.inf, dtype=np.float32)
+        for p, _ in self.prims:
+            bmin = np.minimum(bmin, p.bbox_min)
+            bmax = np.maximum(bmax, p.bbox_max)
+        self.bbox_min = bmin
+        self.bbox_max = bmax
 
     # --------------------------------------------------------------- render
     def render(self, world: pyrr.Matrix44 | None = None):

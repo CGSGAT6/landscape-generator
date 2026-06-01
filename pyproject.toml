@@ -15,6 +15,7 @@ dependencies = [
     "moderngl>=5.10",
     "pyrr>=0.10",
     "dearpygui>=1.11",
+    "moderngl-window>=3.1",
 ]
 
 [project.optional-dependencies]

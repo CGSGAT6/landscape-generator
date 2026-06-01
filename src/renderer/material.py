@@ -4,7 +4,7 @@ from .constants import MATERIAL_BINDING
 from .buffer import Buffer
 from .texture import Texture
 class Material:
-    MATETRIAL_BUF_SIZE = 4*4*4
+    MATETRIAL_BUF_SIZE = 6*4*4
     MAX_TEX = 8
 
     def __init__(self, rnd, name: str,
@@ -37,7 +37,13 @@ class Material:
         c4 = np.array([self.ph, self.tr, 0, 0], dtype=np.float32)
         buf = np.column_stack((vectors, c4))
 
-        self.buf.write(buf.tobytes())
+        self.buf.write(buf.tobytes(), offset=0)
+
+        tex_mask = np.zeros(8, dtype=np.int32)
+        for i in range(self.MAX_TEX):
+            if self.tex[i] is not None:
+                tex_mask[i] = 1
+        self.buf.write(tex_mask.tobytes(), offset=64)
     
     def update(self, ka = None,
                  kd = None,
