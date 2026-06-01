@@ -19,7 +19,7 @@ class Primitive:
         self.shd = shd
         self.mtl = mtl
         self.noofv = int(vertices.nbytes / VERTEX_SIZE)
-        if indeces != None:
+        if indeces is not None:
             self.noofi = int(indeces.nbytes / 4)
         self._update_buffers(vertices=vertices, indeces=indeces)
         self._update_vao()
@@ -29,7 +29,7 @@ class Primitive:
         return not self.shd is None and self.shd.is_valid and not self.vao is None and not self.mtl is None
     
     def _update_vao(self):
-        if not self.shd.is_valid or self.vbuf is None or (self.noofi > 0 and self.self.ibuf is None):
+        if not self.shd.is_valid or self.vbuf is None or (self.noofi > 0 and self.ibuf is None):
             return
 
         vertex_format = (
@@ -68,7 +68,7 @@ class Primitive:
     def _update_buffers(self, vertices: np.ndarray, indeces:np.ndarray | None  = None):
         self.vbuf = self.rnd.ctx.buffer(reserve=vertices.nbytes)
         self.vbuf.write(vertices.tobytes())
-        if indeces != None:
+        if indeces is not None:
             self.ibuf = self.rnd.ctx.buffer(reserve=indeces.nbytes)
             self.ibuf.write(indeces.tobytes())
     def _render(self):

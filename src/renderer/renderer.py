@@ -4,6 +4,9 @@ from .shader import Shader
 from .material import Material
 from .primitive import Primitive
 from .camera import Camera
+from .buffer import Buffer
+from .texture import Texture
+from .model import Model
 import numpy as np
 import moderngl
 import pyrr
@@ -13,6 +16,9 @@ class RenderEngine:
         self.shaders_dict = {}
         self.materials_dict = {}
         self.primitives_dict = {}
+        self.buffers_dict = {}
+        self.textures_dict = {}
+        self.models_dict = {}
         self.cur_frame = 0
         self.width = 470
         self.height = 470
@@ -22,14 +28,15 @@ class RenderEngine:
     SYNC_BUF_SIZE = 4 * 4     
 
     def init(self):
-        self.prim_buf = self.ctx.buffer(reserve=self.PRIM_BUF_SIZE, dynamic=True)
-        self.sync_buf = self.ctx.buffer(reserve=self.SYNC_BUF_SIZE, dynamic=True)
-        self.camera_buf = self.ctx.buffer(reserve=self.CAMERA_BUF_SIZE, dynamic=True)
+        self.ctx.enable(moderngl.DEPTH_TEST)
+        self.prim_buf = self.create_buffer(reserve=self.PRIM_BUF_SIZE)
+        self.sync_buf = self.create_buffer(reserve=self.SYNC_BUF_SIZE)
+        self.camera_buf = self.create_buffer(reserve=self.CAMERA_BUF_SIZE)
         self.camera = Camera()
 
-        self.sync_buf.bind_to_uniform_block(SYNC_BINDING)
-        self.camera_buf.bind_to_uniform_block(CAMERA_BINDING)
-        self.prim_buf.bind_to_uniform_block(PRIM_BINDING)
+        self.sync_buf.bind(SYNC_BINDING)
+        self.camera_buf.bind(CAMERA_BINDING)
+        self.prim_buf.bind(PRIM_BINDING)
     def create_standalone(self, width: int, height: int) -> None:
         self.ctx = moderngl.create_standalone_context()
         self.resize(width, height)
@@ -101,10 +108,10 @@ class RenderEngine:
                      ka: pyrr.Vector3 = pyrr.Vector3([0.47, 0.30, 0.18]),
                      kd: pyrr.Vector3 = pyrr.Vector3([0.47, 0.30, 0.18]),
                      ks: pyrr.Vector3 = pyrr.Vector3([0.47, 0.30, 0.18]),
-                     ph: float = 0.5, tr: float = 0):
+                     ph: float = 0.5, tr: float = 0, tex=[]):
         mtl = self.materials_dict.get(mtl_name)
         if mtl is None:
-            mtl = Material(self, name=mtl_name, ka=ka, kd=kd, ks=ks, ph=ph, tr=tr)
+            mtl = Material(self, name=mtl_name, ka=ka, kd=kd, ks=ks, ph=ph, tr=tr, tex=tex)
             self.materials_dict[mtl_name] = mtl
         return mtl    
 
@@ -114,11 +121,56 @@ class RenderEngine:
     
         if world is None:
             world = pyrr.Matrix44.identity()
-        winv = (~world).T
+        winv = ~(world.T)
+
+        arr = self.camera_buf.read(size=64, offset=64*2)
+
+        db = np.frombuffer(buffer=arr, dtype=np.float32).reshape(4,4)
+
         prim_arr = np.array([world, winv, world * self.camera.get_vp_matrix()], dtype=np.float32)
         self.prim_buf.write(prim_arr.tobytes())
 
         prim._render()
+
     def create_prim(self, vertices: np.ndarray,
-                    indeces: np.ndarray | None  = None, shd = None, mtl = None):
-        return Primitive(rnd=self, vertices=vertices, indeces=indeces, shd=shd, mtl=mtl)
+                    indeces: np.ndarray | None  = None, shd = None, mtl = None, name = None):
+        pr = Primitive(rnd=self, vertices=vertices, indeces=indeces, shd=shd, mtl=mtl)
+
+        if name is not None:
+            self.primitives_dict[name] = pr
+        return pr
+    
+    def get_primitive(self, name):
+        return self.primitives_dict.get(name)
+
+    def create_buffer(self, name = None, data: np.ndarray | None = None, reserve=0):
+        buf = Buffer(self, data=data, reserve=reserve)
+
+        if name is not None:
+            self.buffers_dict[name] = buf
+
+        return buf
+    
+    def get_buffer(self, name):
+        return self.buffers_dict.get(name)
+
+    def create_texture(self, name = None, img_path = None, data = None):
+        tex = Texture(self, img_path=img_path, data=data)
+
+        if name is not None:
+            self.textures_dict[name] = tex
+        
+        return tex
+    def get_texture(self, name):
+        return self.textures_dict.get(name)
+
+    def create_model(self, name=None, prims=None, file_path=None):
+        mdl = Model(self, prims=prims, file_path=file_path)
+
+        if name is not None:
+            self.models_dict[name] = mdl
+        
+        return mdl
+    
+    def get_model(self, name):
+        return self.models_dict.get(name)

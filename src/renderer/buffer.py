@@ -5,19 +5,23 @@ class Buffer:
     buffer: moderngl.Buffer | None = None
     size: int = 0
 
-    def __init__(self, rnd, data: np.ndarray | None = None, reserve=0):
+    def __init__(self, rnd, data: bytes | np.ndarray | None = None, reserve=0):
         self.rnd = rnd
-        self.buffer = self.rnd.ctx.buffer(data=data, reserve=reserve, dynamic=True)
         if data is None:
             self.size = reserve
-        else:
+            self.buffer = self.rnd.ctx.buffer(reserve=reserve, dynamic=True)
+        elif isinstance(data, bytes):
+            self.size = len(data)
+            self.buffer = self.rnd.ctx.buffer(data=data, dynamic=True)
+        elif isinstance(data, np.ndarray):
             self.size = data.nbytes
+            self.buffer = self.rnd.ctx.buffer(data=data.tobytes(), dynamic=True)
 
     @property    
     def is_valid(self):
         return not self.buffer is None
 
-    def read(self, size: int = -1, *, offset: int = 0):
+    def read(self, size: int = -1, offset: int = 0):
         if not self.is_valid:
             return None
         
@@ -53,8 +57,22 @@ class Buffer:
         self.size = new_size
         self.buffer = self.rnd.ctx.buffer(reserve=self.size, dynamic=True)
 
-    def write(self, data: np.ndarray, offset: int = 0):
-        if offset + data.nbytes > self.size:
-            self.resize(new_size=offset + data.nbytes)
-        self.buffer.write(data=data, offset=offset)
+    def write(self, data: np.ndarray | bytes, offset: int = 0):
+        end = 0
+        
+        if isinstance(data, bytes):
+            end = offset + len(data)
+        elif isinstance(data, np.ndarray):
+            end = offset + data.nbytes
+        
+        if end > self.size:
+            self.resize(new_size=end)
+        
+        if isinstance(data, bytes):
+            self.buffer.write(data=data, offset=offset)
+        elif isinstance(data, np.ndarray):
+            self.buffer.write(data=data.tobytes(), offset=offset)
+
+    def bind(self, binding: int = 0, offset: int = 0, size: int = -1):
+        self.buffer.bind_to_storage_buffer(binding=binding, offset=offset, size=size)
         
