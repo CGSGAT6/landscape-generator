@@ -5,22 +5,42 @@ import numpy as np
 from .mesh import Mesh
 
 
-def save_obj(mesh: Mesh, path: str, material_name: str | None = None) -> None:
+def save_obj(mesh: Mesh, path: str | Path,
+             material_name: str | None = None,
+             mtl_filename: str | None = None) -> None:
     lines = ["# Exported by landscape-generator geometry module\n"]
-    if material_name:
-        lines.append(f"mtllib {material_name}.mtl\n")
-        lines.append(f"usemtl {material_name}\n")
+    if mtl_filename:
+        lines.append(f"mtllib {mtl_filename}\n")
 
     for v in mesh.vertices:
         lines.append(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
-    for vn in mesh.normals:
-        lines.append(f"vn {vn[0]:.6f} {vn[1]:.6f} {vn[2]:.6f}\n")
     for vt in mesh.uvs:
         lines.append(f"vt {vt[0]:.6f} {vt[1]:.6f}\n")
+    for vn in mesh.normals:
+        lines.append(f"vn {vn[0]:.6f} {vn[1]:.6f} {vn[2]:.6f}\n")
+
+    if material_name:
+        lines.append(f"usemtl {material_name}\n")
     for f in mesh.indices:
         i0, i1, i2 = f[0] + 1, f[1] + 1, f[2] + 1
         lines.append(f"f {i0}/{i0}/{i0} {i1}/{i1}/{i1} {i2}/{i2}/{i2}\n")
 
+    Path(path).write_text("".join(lines))
+
+
+def save_mtl(path: str | Path, material_name: str,
+             texture_rel_path: str | None = None) -> None:
+    lines = [
+        f"newmtl {material_name}\n",
+        "Ka 0.47 0.30 0.18\n",
+        "Kd 0.47 0.30 0.18\n",
+        "Ks 0.47 0.30 0.18\n",
+        "Ns 500.0\n",
+        "d 1.0\n",
+        "illum 2\n",
+    ]
+    if texture_rel_path:
+        lines.append(f"map_Kd {texture_rel_path}\n")
     Path(path).write_text("".join(lines))
 
 

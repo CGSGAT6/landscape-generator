@@ -53,7 +53,7 @@ void main() {
     //    gl_Position = vec4(InPosition, 1);//MatrWVP * vec4(InPosition, 1);
     //    gl_Position = MatrWVP * vec4(InPosition, 1);
     //    gl_Position = vec4(InPosition, 1);
-        gl_Position = MatrProj * MatrView * MatrW * vec4(InPosition, 1);
+        gl_Position = MatrWVP * vec4(InPosition, 1);
     //    //gl_Position = MatrVP * MatrW * vec4(InPosition, 1);
     // --- active version ---
     //gl_Position = MatrVP * vec4(InPosition, 1);

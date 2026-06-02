@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "seed_height": 42,
+  "seed_moisture": 100,
+  "seed_trees": 200,
+  "sea_level": 0.2,
+  "height_map": "demo_landscape/data/height_map.npy",
+  "biome_map": "demo_landscape/data/biome_map.npy",
+  "grid_mesh": "demo_landscape/meshes/grid.obj",
+  "grid_mtl": "demo_landscape/meshes/grid.mtl",
+  "flat_mesh": "demo_landscape/meshes/flat.obj",
+  "flat_mtl": "demo_landscape/meshes/flat.mtl",
+  "tree_positions": "demo_landscape/data/tree_positions.npy"
+}
