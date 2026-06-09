@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "seed_height": 123450,
+  "seed_moisture": 678900,
+  "seed_trees": 30,
+  "sea_level": 0.2,
+  "height_map": "test3/data/height_map.npy",
+  "biome_map": "test3/data/biome_map.npy",
+  "texture": "test3/textures/landscape_tex.png",
+  "grid_mesh": "test3/meshes/grid.obj",
+  "grid_mtl": "test3/meshes/grid.mtl",
+  "flat_mesh": "test3/meshes/flat.obj",
+  "flat_mtl": "test3/meshes/flat.mtl",
+  "tree_positions": "test3/data/tree_positions.npy"
+}

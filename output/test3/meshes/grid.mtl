@@ -1,0 +1,8 @@
+newmtl grid
+Ka 0.47 0.30 0.18
+Kd 0.47 0.30 0.18
+Ks 0.47 0.30 0.18
+Ns 500.0
+d 1.0
+illum 2
+map_Kd ../textures/landscape_tex.png

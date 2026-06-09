@@ -56,7 +56,7 @@ vec3 Shade( vec3 P, vec3 N, vec3 InKa, vec3 InKd, vec3 InKs, float InPh )
   //vec3 L = (vec3(sin(Time) * 0.30 * 5 * 5, 8, 1));
   //vec3 LDir = vec3(0, -1, 0);
   //L = CamLoc;
-  vec3 LightPos = vec3(1, 1.5, 1) * 5;
+  vec3 LightPos = vec3(0, 1.5, 0) * 50;
 
   vec3 L = LightPos - P;
  
@@ -64,8 +64,8 @@ vec3 Shade( vec3 P, vec3 N, vec3 InKa, vec3 InKd, vec3 InKs, float InPh )
   L /= d;
  
   float
-    cc = 1,
-    cl = 0.01,
+    cc = 0.1,
+    cl = 0.001,
     cq = 0.0001,
     att = min(1, 1 / (cc + cl * d + cq * d * d));
   /*
