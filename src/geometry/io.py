@@ -48,7 +48,7 @@ def load_obj(path: str) -> Mesh:
     positions = []
     normals = []
     uvs = []
-    faces = []
+    face_refs = []
 
     for line in Path(path).read_text().splitlines():
         line = line.strip()
@@ -64,25 +64,54 @@ def load_obj(path: str) -> Mesh:
         elif parts[0] == "vt":
             uvs.append([float(parts[1]), float(parts[2])])
         elif parts[0] == "f":
-            verts = []
+            refs = []
             for p in parts[1:]:
-                idx = p.split("/")[0]
-                verts.append(int(idx) - 1)
-            for i in range(1, len(verts) - 1):
-                faces.append([verts[0], verts[i], verts[i + 1]])
+                indices = p.split("/")
+                vi = int(indices[0]) - 1
+                vti = int(indices[1]) - 1 if len(indices) > 1 and indices[1] else -1
+                vni = int(indices[2]) - 1 if len(indices) > 2 and indices[2] else -1
+                refs.append((vi, vti, vni))
+            for i in range(1, len(refs) - 1):
+                face_refs.append([refs[0], refs[i], refs[i + 1]])
 
-    vertices_arr = np.array(positions, dtype=np.float32)
-    indices_arr = np.array(faces, dtype=np.uint32)
+    has_normals = len(normals) > 0
+    has_uvs = len(uvs) > 0
 
-    if normals:
-        normals_arr = np.array(normals, dtype=np.float32)
-    else:
-        normals_arr = np.zeros((len(vertices_arr), 3), dtype=np.float32)
+    ref_map = {}
+    ref_order = []
+    for tri in face_refs:
+        for ref in tri:
+            if ref not in ref_map:
+                ref_map[ref] = len(ref_order)
+                ref_order.append(ref)
 
-    if uvs:
-        uvs_arr = np.array(uvs, dtype=np.float32)
-    else:
-        uvs_arr = np.zeros((len(vertices_arr), 2), dtype=np.float32)
+    verts = []
+    norms = []
+    uvs_exp = []
+    for vi, vti, vni in ref_order:
+        verts.append(positions[vi])
+        if has_normals and 0 <= vni < len(normals):
+            norms.append(normals[vni])
+        else:
+            norms.append([0.0, 0.0, 0.0])
+        if has_uvs and 0 <= vti < len(uvs):
+            uvs_exp.append(uvs[vti])
+        else:
+            uvs_exp.append([0.0, 0.0])
+
+    indices = []
+    for tri in face_refs:
+        for ref in tri:
+            indices.append(ref_map[ref])
+
+    vertices_arr = np.array(verts, dtype=np.float32)
+    indices_arr = np.array(indices, dtype=np.uint32).reshape(-1, 3)
+    normals_arr = np.array(norms, dtype=np.float32)
+    uvs_arr = np.array(uvs_exp, dtype=np.float32)
+
+    if not has_normals:
+        from .utils import compute_normals
+        normals_arr = compute_normals(vertices_arr, indices_arr)
 
     return Mesh(
         vertices=vertices_arr,

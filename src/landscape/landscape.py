@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
+from PIL import Image
 
 from geometry import Mesh, save_obj, save_mtl
 
@@ -16,8 +18,11 @@ class Landscape:
     height_map: np.ndarray
     biome_map: np.ndarray
     texture_path: Path | None = None
+    texture_image: Image.Image | None = None
     grid_mesh: Mesh | None = None
+    grid_mesh_path: Path | None = None
     flat_mesh: Mesh | None = None
+    flat_mesh_path: Path | None = None
     sea_level: float = 0.5
     tree_positions: np.ndarray | None = None
     tree_model_path: Path | None = None
@@ -73,11 +78,15 @@ class Landscape:
                      mtl_filename="grid.mtl")
             tex_rel = None
             if self.texture_path is not None:
-                tex_rel = relpath(tex_dir / self.texture_path.name)
+                tex_rel = os.path.relpath(
+                    (tex_dir / self.texture_path.name).resolve(),
+                    mesh_dir.resolve(),
+                ).replace("\\", "/")
             save_mtl(mtl_path, material_name="grid",
                      texture_rel_path=tex_rel)
             manifest["grid_mesh"] = relpath(obj_path)
             manifest["grid_mtl"] = relpath(mtl_path)
+            self.grid_mesh_path = obj_path.resolve()
 
         if self.flat_mesh is not None:
             obj_path = mesh_dir / "flat.obj"
@@ -87,11 +96,15 @@ class Landscape:
                      mtl_filename="flat.mtl")
             tex_rel = None
             if self.texture_path is not None:
-                tex_rel = relpath(tex_dir / self.texture_path.name)
+                tex_rel = os.path.relpath(
+                    (tex_dir / self.texture_path.name).resolve(),
+                    mesh_dir.resolve(),
+                ).replace("\\", "/")
             save_mtl(mtl_path, material_name="flat",
                      texture_rel_path=tex_rel)
             manifest["flat_mesh"] = relpath(obj_path)
             manifest["flat_mtl"] = relpath(mtl_path)
+            self.flat_mesh_path = obj_path.resolve()
 
         if self.tree_positions is not None:
             np.save(data_dir / "tree_positions.npy", self.tree_positions)
@@ -118,18 +131,24 @@ class Landscape:
         biome_map = np.load(abs_path(manifest["biome_map"]))
 
         texture_path: Path | None = None
+        texture_image: Image.Image | None = None
         if "texture" in manifest:
             texture_path = abs_path(manifest["texture"])
+            texture_image = Image.open(texture_path)
 
         grid_mesh: Mesh | None = None
+        grid_mesh_path: Path | None = None
         if "grid_mesh" in manifest:
             from geometry import load_obj
-            grid_mesh = load_obj(str(abs_path(manifest["grid_mesh"])))
+            grid_mesh_path = abs_path(manifest["grid_mesh"])
+            grid_mesh = load_obj(str(grid_mesh_path))
 
         flat_mesh: Mesh | None = None
+        flat_mesh_path: Path | None = None
         if "flat_mesh" in manifest:
             from geometry import load_obj
-            flat_mesh = load_obj(str(abs_path(manifest["flat_mesh"])))
+            flat_mesh_path = abs_path(manifest["flat_mesh"])
+            flat_mesh = load_obj(str(flat_mesh_path))
 
         tree_positions: np.ndarray | None = None
         if "tree_positions" in manifest:
@@ -143,8 +162,11 @@ class Landscape:
             height_map=height_map,
             biome_map=biome_map,
             texture_path=texture_path,
+            texture_image=texture_image,
             grid_mesh=grid_mesh,
+            grid_mesh_path=grid_mesh_path,
             flat_mesh=flat_mesh,
+            flat_mesh_path=flat_mesh_path,
             sea_level=manifest.get("sea_level", 0.5),
             tree_positions=tree_positions,
             tree_model_path=tree_model_path,

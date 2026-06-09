@@ -23,12 +23,21 @@ class Primitive:
             self.noofi = int(indeces.nbytes / 4)
         self._compute_bbox(vertices)
         self._update_buffers(vertices=vertices, indeces=indeces)
-        self._update_vao()
+        self.update_frame = -1
+        self._try_update()
+        #self._update_vao()
 
     @property
     def is_valid(self):
-        return not self.shd is None and self.shd.is_valid and not self.vao is None and not self.mtl is None
-    
+        return self.shd is not None and self.shd.is_valid and self.vao is not None and self.mtl is not None
+
+    def _try_update(self):
+        if self.shd is None:
+            return
+        if self.shd.update_frame > self.update_frame:
+            self._update_vao()
+            self.update_frame = self.shd.update_frame     
+
     def _update_vao(self):
         if not self.shd.is_valid or self.vbuf is None or (self.noofi > 0 and self.ibuf is None):
             return
@@ -43,7 +52,7 @@ class Primitive:
         locs = ()
 
         for sign, loc, padd in vertex_format:
-            if not (self.shd._get_attribute_by_location(loc) is None):
+            if self.shd._get_attribute_by_location(loc) is not None:
                 fstr += sign + " "
                 locs += (loc,)
             else:
@@ -77,9 +86,23 @@ class Primitive:
         self.bbox_min = pos.min(axis=0)
         self.bbox_max = pos.max(axis=0)
 
+    def release(self) -> None:
+        if self.vao is not None:
+            self.vao.release()
+            self.vao = None
+        if self.ibuf is not None:
+            self.ibuf.release()
+            self.ibuf = None
+        if self.vbuf is not None:
+            self.vbuf.release()
+            self.vbuf = None
+
     def _render(self):
         if not self.is_valid:
             return
+        
+        self._try_update()
+
         self.mtl.use()
         if (self.noofi > 0):
             self.vao.render(mode=moderngl.TRIANGLES, vertices=self.noofi)

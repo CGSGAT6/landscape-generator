@@ -56,7 +56,7 @@ vec3 Shade( vec3 P, vec3 N, vec3 InKa, vec3 InKd, vec3 InKs, float InPh )
   //vec3 L = (vec3(sin(Time) * 0.30 * 5 * 5, 8, 1));
   //vec3 LDir = vec3(0, -1, 0);
   //L = CamLoc;
-  vec3 LightPos = vec3(1, 1.5, 1) * 15;
+  vec3 LightPos = vec3(1, 1.5, 1) * 5;
 
   vec3 L = LightPos - P;
  
@@ -79,13 +79,15 @@ vec3 Shade( vec3 P, vec3 N, vec3 InKa, vec3 InKd, vec3 InKs, float InPh )
   att = 1;
   */
   vec3 color = min(vec3(0.1), InKa);
+
+  int is_face = int(dot(N, L) >= 0);
  
   N = faceforward(N, V, N);
  
-  color += InKd * max(0.0, dot(N, L));
+  color += InKd * dot(N, L) * is_face;
   //Specular
   vec3 R;
-  color += InKs * max(0, pow(dot((R = reflect(V, N)), L), InPh));
+  color += InKs * max(0, pow(dot((R = reflect(V, N)), L), InPh)) * is_face;
  
   color *= att;
   /*
@@ -122,17 +124,17 @@ void main() {
     vec3 v = (CamLoc4.xyz - DrawPosition);
     vec3 n = DrawNormal;
 
-    //int b = dot(n, v) > 0 ? 1 : 0;
-    //n = n * (b) -n * (1 - b);
+    int b = dot(n, v) > 0 ? 1 : 0;
+    n = n * (b) -n * (1 - b);
 
     n = normalize(n);
 
-    /*vec3 LightPos = vec3(1, 1.5, 1) * 15;
+    vec3 LightPos = vec3(1, 1.5, 1) * 15;
 
     vec3 l = LightPos - DrawPosition;
 
-    vec3 C = vec3(0.47, 0.30, 0.18) * dot(l, n) / (0.8 +length(l)); 
-    */
+    vec3 ccc = vec3(0.47, 0.30, 0.18) * dot(l, n) / (0.8 +length(l)); 
+    
 
     int ht = TexMask0.x;
     
@@ -140,8 +142,10 @@ void main() {
     
 
 
-    vec3 C = Shade(DrawPosition, n, col, col, col, 30 * 3);
+    vec3 C = Shade(DrawPosition, n, col, col, col, 30 * 2);
 
     FragColor = vec4(C, 1);
+    //FragColor = vec4(vec3(-dot(normalize(v), vec3(1, 1, 1))), 1);
+
 
 }

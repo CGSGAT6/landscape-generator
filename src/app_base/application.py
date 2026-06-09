@@ -18,5 +18,6 @@ class Application:
         self.root.mainloop()
 
     def close(self) -> None:
+        self.controller.release()
         self.root.quit()
         self.root.destroy()

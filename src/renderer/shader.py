@@ -6,8 +6,10 @@ class Shader:
         self.vert_path = vert_path
         self.frag_path = frag_path
         self.program: moderngl.Program | None = None
+        self.update_frame = -1
         self._is_valid = self._load()
-        self.update_frame = self.rnd.cur_frame  
+        if self._is_valid:
+            self.update_frame = self.rnd.cur_frame  
 
     @property
     def is_valid(self):
@@ -32,6 +34,7 @@ class Shader:
     def reload(self) -> bool:
         old = self.program
         if self._load():
+            self.update_frame = self.rnd.cur_frame
             return True
         self.program = old
         return False

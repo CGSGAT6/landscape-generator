@@ -25,6 +25,7 @@ dev = [
 ]
 
 [project.scripts]
+demo = "demo:main"
 landscape-generator = "app.main:main"   # команда запуска после pip install
 noise-demo = "noise.demo:demo"   
 geometry-demo = "geometry.demo:demo"

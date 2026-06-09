@@ -14,6 +14,8 @@ import moderngl
 import pyrr
 
 class RenderEngine:
+    clear_color = (0.18, 0.30, 0.47, 1.0)
+
     def __init__(self):
         self.ctx: moderngl.Context | None = None
         self.shaders_dict = {}
@@ -42,6 +44,7 @@ class RenderEngine:
         self.prim_buf.bind(PRIM_BINDING)
     def create_standalone(self, width: int, height: int) -> None:
         self.ctx = moderngl.create_standalone_context()
+        self.is_standalone = True
         self.resize(width, height)
 
     def create_from_window(self, ctx: moderngl.Context | None = None) -> None:
@@ -50,10 +53,14 @@ class RenderEngine:
         else:
             self.ctx = moderngl.create_context(require=430)
         ctx.gc_mode = "context_gc"
+        self.is_standalone = False
 
     @property
     def is_valid(self) -> bool:
         return self.ctx is not None
+
+    def set_clear_color(self, color):
+        self.clear_color = color
 
     def set_screen_fbo(self, screen_fbo):
         self.screen_fbo = screen_fbo
@@ -75,6 +82,8 @@ class RenderEngine:
     
     def close(self):
         self.ctx.gc()
+        if self.is_standalone:
+            self.ctx.release()
     
     def _update_camera_buf(self):
         
@@ -93,7 +102,7 @@ class RenderEngine:
         
     def begin_frame(self, time, delta_time):
         self.screen_fbo.use()
-        self.clear((0.18, 0.30, 0.47, 1.0))
+        self.clear(self.clear_color)
         self.time = time
         self.delta_time = delta_time
         self.cur_frame += 1
@@ -135,7 +144,7 @@ class RenderEngine:
 
         db = np.frombuffer(buffer=arr, dtype=np.float32).reshape(4,4)
 
-        prim_arr = np.array([world, winv, world * self.camera.get_vp_matrix()], dtype=np.float32)
+        prim_arr = np.array([world, winv, self.camera.get_vp_matrix() * world], dtype=np.float32)
         self.prim_buf.write(prim_arr.tobytes())
 
         prim._render()
@@ -182,3 +191,19 @@ class RenderEngine:
     
     def get_model(self, name):
         return self.models_dict.get(name)
+
+    def reload_shaders(self):
+        for n in self.shaders_dict:
+            self.shaders_dict[n].reload()
+
+    def camera_orbit(self, delta_yaw: float, delta_pitch: float) -> None:
+        self.camera.orbit(delta_yaw, delta_pitch)
+        self._update_camera_buf()
+
+    def camera_zoom(self, delta: float) -> None:
+        self.camera.zoom(delta)
+        self._update_camera_buf()
+
+    def camera_pan(self, delta_x: float, delta_y: float) -> None:
+        self.camera.pan(delta_x, delta_y)
+        self._update_camera_buf()    

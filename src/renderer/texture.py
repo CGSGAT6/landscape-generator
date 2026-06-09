@@ -14,7 +14,7 @@ class Texture:
     
     def _release(self) -> None:
         if self.is_valid:
-            self.texture.release()
+            self.texture.release() ##??
             self.texture = None
 
     def load_file(self, path: str) -> None:

@@ -24,7 +24,7 @@ class Camera:
         pos = self._get_position()
         self.view_matrix = Matrix44.look_at(pos, self._target, np.array([0.0, 1.0, 0.0], dtype=np.float32))
         self.proj_matrix = Matrix44.perspective_projection(self.fov, self.aspect, self.near, self.far)
-        self.vp_matrix = self.view_matrix * self.proj_matrix
+        self.vp_matrix = self.proj_matrix * self.view_matrix
 
     def set_position(self, x: float, y: float, z: float) -> None:
         offset = np.array([x, y, z], dtype=np.float32) - self._target

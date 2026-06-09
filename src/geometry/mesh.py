@@ -16,3 +16,6 @@ class Mesh:
     @property
     def face_count(self) -> int:
         return len(self.indices)
+
+    def to_interleaved(self) -> np.ndarray:
+        return np.column_stack([self.vertices, self.normals, self.uvs])

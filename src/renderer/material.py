@@ -31,6 +31,14 @@ class Material:
         self.buf = rnd.create_buffer(reserve=self.MATETRIAL_BUF_SIZE)
         self.update_buffers()
         
+    def set_texture(self, texture: Texture, idx: int) -> None:
+        if not isinstance(texture, Texture):
+            raise TypeError("Expected a Texture instance")
+        if idx < 0 or idx >= self.MAX_TEX:
+            raise IndexError(f"idx must be 0..{self.MAX_TEX - 1}")
+        self.tex[idx] = texture
+        self.update_buffers()
+
     def update_buffers(self):
         vectors = np.array([self.ka, self.kd, self.ks,
                    pyrr.Vector3([0, 0, 0])], dtype=np.float32)

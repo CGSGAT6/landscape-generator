@@ -47,6 +47,14 @@ class Model:
     def add_prims(self, prims, local_matrix=pyrr.Matrix44.identity()):
         for p in prims:
             self.prims.append((p, local_matrix))
+        self.compute_bbox()
+      
+    def clear_prims(self):
+        self.prims.clear()
+        self.compute_bbox()
+        
+    def __getitem__(self, idx: int):
+        return self.prims[idx][0]
 
     def set_matrix(self, idx: int, local_matrix=pyrr.Matrix44.identity()):
         if idx < len(self.prims):
