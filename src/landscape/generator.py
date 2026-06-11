@@ -8,6 +8,7 @@ from geometry import GridBuilder, DelaunayTriangulator
 from noise import FractalNoise, PerlinNoise, PoissonSampler, NoiseFilter
 from .landscape import Landscape
 from .biome import BiomeType
+from .selector import Selector, apply_selector_to_arrays, _make_default_selector
 
 
 _BIOME_COLORS = {
@@ -41,6 +42,71 @@ def _sample_height_at(points: np.ndarray,
     return height_map[row, col] * z_scale
 
 
+# ─── Применение Selector к массивам (импортируется из selector.py) ──
+
+
+# ─── Непрерывная генерация текстуры ──────────────────────────────────
+
+
+def _sample_fbm_grid(x_grid: np.ndarray,
+                     y_grid: np.ndarray,
+                     base_noise: PerlinNoise,
+                     octaves: int, gain: float,
+                     scale: float, lacunarity: float) -> np.ndarray:
+    data = np.zeros_like(x_grid, dtype=np.float32)
+    amplitude = 1.0
+    freq = scale
+    max_value = 0.0
+    for _ in range(octaves):
+        data += base_noise._evaluate_grid(x_grid * freq, y_grid * freq) * amplitude
+        max_value += amplitude
+        amplitude *= gain
+        freq *= lacunarity
+    data /= max_value
+    return data
+
+
+def _generate_continuous_texture(
+    tex_w: int, tex_h: int,
+    grid_w: int, grid_h: int,
+    base_h: PerlinNoise, base_m: PerlinNoise,
+    octaves: int, gain: float, scale: float, lacunarity: float,
+    exponent: float,
+    selector: Selector,
+) -> tuple[Image.Image, Image.Image, Image.Image]:
+    px = np.linspace(0, grid_w, tex_w, endpoint=False)
+    py = np.linspace(0, grid_h, tex_h, endpoint=False)
+    x_grid, y_grid = np.meshgrid(px, py)
+
+    height_raw = _sample_fbm_grid(x_grid, y_grid, base_h,
+                                   octaves, gain, scale, lacunarity)
+    height_raw = np.clip(height_raw, 0.0, 1.0)
+    height_vals = np.power(height_raw, exponent)
+
+    moisture_vals = _sample_fbm_grid(x_grid, y_grid, base_m,
+                                      octaves, gain, scale, lacunarity)
+    moisture_vals = np.clip(moisture_vals, 0.0, 1.0)
+
+    biome_map = apply_selector_to_arrays(selector, height_vals, moisture_vals)
+
+    rgb = np.zeros((tex_h, tex_w, 3), dtype=np.uint8)
+    for btype, color in _BIOME_COLORS.items():
+        mask = biome_map == btype
+        rgb[mask] = color
+    biome_img = Image.fromarray(rgb, mode="RGB")
+
+    height_img = Image.fromarray(
+        (height_vals * 255).astype(np.uint8), mode="L"
+    )
+    moisture_img = Image.fromarray(
+        (moisture_vals * 255).astype(np.uint8), mode="L"
+    )
+    return biome_img, height_img, moisture_img
+
+
+# ─── Generator ────────────────────────────────────────────────────────
+
+
 class Generator:
     def __init__(self):
         self._noise_cache: dict[int, PerlinNoise] = {}
@@ -68,60 +134,84 @@ class Generator:
         x_scale: float = 1.0,
         y_scale: float = 1.0,
         z_scale: float = 20.0,
-        detail: float = 50.0,
+        detail: float = 3.0,
         noise_decay: float = 0.5,
         frequency: float = 0.05,
         lacunarity: float = 2.0,
         power: float = 1.0,
         tree_density: float = 30.0,
+        texture_resolution: int = 1,
+        selector: Selector | None = None,
     ) -> Landscape:
-        octaves = max(1, int(round(detail / 10)))
+        octaves = 6
         gain = noise_decay
         scale = frequency
         exponent = power
         min_dist = max(0.5, 5.0 - tree_density * 0.045)
 
-        base = self._get_noise(seed_height)
-        noise = FractalNoise(base)
-        nm = noise.fbm(width, height, octaves=octaves, gain=gain, scale=scale, lacunarity=lacunarity)
-        height_map = NoiseFilter.power_curve(nm, exponent).data
+        grid_detail = max(1, int(round(detail)))
+        grid_w = max(2, int(round(width * grid_detail)))
+        grid_h = max(2, int(round(height * grid_detail)))
+        cell_w = 1.0 / grid_detail
+        cell_h = 1.0 / grid_detail
 
-        biome_map = np.zeros((height, width), dtype=np.uint8)
-        biome_map[height_map < sea_level] = BiomeType.WATER
-        biome_map[(height_map >= sea_level) & (height_map < 0.35)] = BiomeType.SAND
-        biome_map[(height_map >= 0.35) & (height_map < 0.6)] = BiomeType.GRASS
-        biome_map[(height_map >= 0.6) & (height_map < 0.8)] = BiomeType.FOREST
-        biome_map[height_map >= 0.8] = BiomeType.ROCK
+        if selector is None:
+            selector = _make_default_selector(sea_level)
+
+        base_h = self._get_noise(seed_height)
+        noise_h = FractalNoise(base_h)
+        hm_noise = noise_h.fbm(grid_w, grid_h, octaves=octaves,
+                                gain=gain, scale=scale, lacunarity=lacunarity)
+        height_map = NoiseFilter.power_curve(hm_noise, exponent).data
+
+        base_m = self._get_noise(seed_moisture)
+        noise_m = FractalNoise(base_m)
+        mm_noise = noise_m.fbm(grid_w, grid_h, octaves=octaves,
+                                gain=gain, scale=scale, lacunarity=lacunarity)
+        moisture_map = np.clip(mm_noise.data, 0.0, 1.0)
+
+        biome_map = apply_selector_to_arrays(selector, height_map, moisture_map)
 
         grid_mesh = GridBuilder().build(height_map,
-                                         x_scale=x_scale,
-                                         y_scale=y_scale,
+                                         x_scale=cell_w,
+                                         y_scale=cell_h,
                                          z_scale=z_scale)
 
         sampler = PoissonSampler(seed_trees)
-        pts = sampler.sample(width * x_scale, height * y_scale, min_distance=min_dist)
+        pts = sampler.sample(width, height, min_distance=min_dist)
         heights = _sample_height_at(pts.points, height_map,
-                                    x_scale, y_scale, z_scale)
+                                    cell_w, cell_h, z_scale)
         flat_mesh = DelaunayTriangulator().triangulate(
             pts.points, heights=heights,
             z_scale=1.0, flat=True, add_bounding_box=True,
         )
 
-        tree_positions = np.array([
-            [5.0, height_map[10, 10] * z_scale, 5.0],
-            [15.0, height_map[20, 30] * z_scale, 15.0],
-            [25.0, height_map[40, 20] * z_scale, 25.0],
-        ], dtype=np.float32)
+        tree_positions = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
+                                  dtype=np.float32)
 
+        tex_res = max(1, texture_resolution)
+        tex_w = grid_w * tex_res
+        tex_h = grid_h * tex_res
+        tex_img, height_img, moisture_img = _generate_continuous_texture(
+            tex_w, tex_h,
+            grid_w, grid_h,
+            base_h, base_m,
+            octaves, gain, scale, lacunarity, exponent,
+            selector,
+        )
         tex_path = OUTPUT_DIR / "landscape_tex.png"
-        tex_img = _make_biome_texture(biome_map)
         tex_img.save(tex_path)
+        height_img.save(OUTPUT_DIR / "landscape_height.png")
+        moisture_img.save(OUTPUT_DIR / "landscape_moisture.png")
 
         self._landscape = Landscape(
             height_map=height_map,
             biome_map=biome_map,
+            moisture_map=moisture_map,
             texture_path=tex_path,
             texture_image=tex_img,
+            height_image=height_img,
+            moisture_image=moisture_img,
             grid_mesh=grid_mesh,
             flat_mesh=flat_mesh,
             sea_level=sea_level,

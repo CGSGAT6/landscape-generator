@@ -207,3 +207,37 @@ class RenderEngine:
     def camera_pan(self, delta_x: float, delta_y: float) -> None:
         self.camera.pan(delta_x, delta_y)
         self._update_camera_buf()    
+
+#        self.shaders_dict = {}
+#        self.materials_dict = {}
+#        self.primitives_dict = {}
+#        self.buffers_dict = {}
+#        self.textures_dict = {}
+#        self.models_dict = {}
+
+
+    def clear_shaders_cash(self):
+        self.shaders_dict.clear()
+
+    def clear_materials_cash(self):
+        self.materials_dict.clear()
+
+    def clear_primitives_cash(self):
+        self.primitives_dict.clear()
+
+    def clear_buffers_cash(self):
+        self.buffers_dict.clear()
+
+    def clear_textures_cash(self):
+        self.textures_dict.clear()
+
+    def clear_models_cash(self):
+        self.models_dict.clear()
+
+    def clear_resource_cash(self):
+        self.clear_shaders_cash()
+        self.clear_materials_cash()
+        self.clear_primitives_cash()
+        self.clear_buffers_cash()
+        self.clear_textures_cash()
+        self.clear_models_cash()

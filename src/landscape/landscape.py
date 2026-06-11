@@ -17,8 +17,11 @@ from geometry import Mesh, save_obj, save_mtl
 class Landscape:
     height_map: np.ndarray
     biome_map: np.ndarray
+    moisture_map: np.ndarray | None = None
     texture_path: Path | None = None
     texture_image: Image.Image | None = None
+    height_image: Image.Image | None = None
+    moisture_image: Image.Image | None = None
     grid_mesh: Mesh | None = None
     grid_mesh_path: Path | None = None
     flat_mesh: Mesh | None = None
@@ -62,6 +65,10 @@ class Landscape:
         np.save(data_dir / "height_map.npy", self.height_map)
         manifest["height_map"] = relpath(data_dir / "height_map.npy")
 
+        if self.moisture_map is not None:
+            np.save(data_dir / "moisture_map.npy", self.moisture_map)
+            manifest["moisture_map"] = relpath(data_dir / "moisture_map.npy")
+
         np.save(data_dir / "biome_map.npy", self.biome_map)
         manifest["biome_map"] = relpath(data_dir / "biome_map.npy")
 
@@ -69,6 +76,16 @@ class Landscape:
             dst = tex_dir / self.texture_path.name
             shutil.copy2(self.texture_path, dst)
             manifest["texture"] = relpath(dst)
+
+        if self.height_image is not None:
+            dst = tex_dir / "height.png"
+            self.height_image.save(dst)
+            manifest["height_image"] = relpath(dst)
+
+        if self.moisture_image is not None:
+            dst = tex_dir / "moisture.png"
+            self.moisture_image.save(dst)
+            manifest["moisture_image"] = relpath(dst)
 
         if self.grid_mesh is not None:
             obj_path = mesh_dir / "grid.obj"
@@ -130,11 +147,23 @@ class Landscape:
         height_map = np.load(abs_path(manifest["height_map"]))
         biome_map = np.load(abs_path(manifest["biome_map"]))
 
+        moisture_map: np.ndarray | None = None
+        if "moisture_map" in manifest:
+            moisture_map = np.load(abs_path(manifest["moisture_map"]))
+
         texture_path: Path | None = None
         texture_image: Image.Image | None = None
         if "texture" in manifest:
             texture_path = abs_path(manifest["texture"])
             texture_image = Image.open(texture_path)
+
+        height_image: Image.Image | None = None
+        if "height_image" in manifest:
+            height_image = Image.open(abs_path(manifest["height_image"]))
+
+        moisture_image: Image.Image | None = None
+        if "moisture_image" in manifest:
+            moisture_image = Image.open(abs_path(manifest["moisture_image"]))
 
         grid_mesh: Mesh | None = None
         grid_mesh_path: Path | None = None
@@ -161,8 +190,11 @@ class Landscape:
         return cls(
             height_map=height_map,
             biome_map=biome_map,
+            moisture_map=moisture_map,
             texture_path=texture_path,
             texture_image=texture_image,
+            height_image=height_image,
+            moisture_image=moisture_image,
             grid_mesh=grid_mesh,
             grid_mesh_path=grid_mesh_path,
             flat_mesh=flat_mesh,

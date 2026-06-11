@@ -35,8 +35,10 @@ class AppController:
         self._ctrl_pressed: bool = False
         self._shift_pressed: bool = False
         self._held_keys: set = set()
+        self._last_key_time: dict[str, float] = {}
+        self._KEY_TIMEOUT: float = 2.0
 
-        self.detail = tk.DoubleVar(value=50.0)
+        self.detail = tk.DoubleVar(value=3.0)
         self.noise_decay = tk.DoubleVar(value=0.5)
         self.mountain_height = tk.DoubleVar(value=50.0)
         self.frequency = tk.DoubleVar(value=0.05)
@@ -49,9 +51,12 @@ class AppController:
 
         self.tree_density = tk.DoubleVar(value=30.0)
         self.power = tk.DoubleVar(value=1.0)
+        self.texture_resolution = tk.IntVar(value=1)
         self.show_flat = tk.BooleanVar(value=False)
+        self.display_mode = tk.StringVar(value="biomes")
 
         root.bind("<Configure>", self._on_resize, add="+")
+        root.bind("<FocusOut>", lambda e: (self._held_keys.clear(), self._last_key_time.clear()), add="+")
 
     def set_image_label(self, label: tk.Label):
         self.image_label = label
@@ -112,6 +117,7 @@ class AppController:
             self.root.after_cancel(self._loop_job)
             self._loop_job = None
         self._held_keys.clear()
+        self._last_key_time.clear()
         if self._bridge is not None:
             self._bridge.release()
             self._bridge = None
@@ -124,10 +130,14 @@ class AppController:
         dt = now - self._last_time
         self._last_time = now
 
+        for key in list(self._held_keys):
+            if now - self._last_key_time.get(key, 0) > self._KEY_TIMEOUT:
+                self._held_keys.discard(key)
+
         mult = 3.0 if self._shift_pressed else 1.0
         orbit_speed = 60.0 * mult
         pan_speed = 2.0 * mult
-        zoom_speed = 3.0 * mult
+        zoom_speed = 30.0 * mult
 
         if "up" in self._held_keys:
             self._auto_orbit = False
@@ -218,6 +228,26 @@ class AppController:
         if self._bridge is not None:
             self._bridge.set_view_flat(self.show_flat.get())
 
+    # ── Keyboard helpers ──────────────────────────────────────────────
+
+    _KEY_MAP: dict[str, str] = {
+        "Left": "left", "Right": "right",
+        "Up": "up", "Down": "down",
+        "equal": "zoom_in", "plus": "zoom_in",
+        "minus": "zoom_out",
+    }
+
+    def on_key_press(self, event: tk.Event) -> None:
+        key = self._KEY_MAP.get(event.keysym)
+        if key is not None:
+            self._held_keys.add(key)
+            self._last_key_time[key] = time.perf_counter()
+
+    def on_key_release(self, event: tk.Event) -> None:
+        key = self._KEY_MAP.get(event.keysym)
+        if key is not None:
+            self._held_keys.discard(key)
+
     # ── Generation ───────────────────────────────────────────────────
 
     def generate_landscape(self) -> dict | None:
@@ -226,12 +256,14 @@ class AppController:
             "noise_decay": self.noise_decay.get(),
             "mountain_height": self.mountain_height.get(),
             "frequency": self.frequency.get(),
+            "lacunarity": self.lacunarity.get(),
             "seed1": self.seed1.get(),
             "seed2": self.seed2.get(),
             "width": self.width.get(),
             "height": self.height.get(),
             "tree_density": self.tree_density.get(),
             "power": self.power.get(),
+            "texture_resolution": self.texture_resolution.get(),
         }
 
         print("\n" + "=" * 40)
@@ -259,6 +291,7 @@ class AppController:
             lacunarity=self.lacunarity.get(),
             power=self.power.get(),
             tree_density=self.tree_density.get(),
+            texture_resolution=self.texture_resolution.get(),
         )
         self._landscape = landscape
 
@@ -271,14 +304,24 @@ class AppController:
         return params
 
     def _display_heightmap(self, landscape: Landscape) -> None:
-        hm = landscape.height_map
-        hm_norm = ((hm - hm.min()) / (hm.max() - hm.min() + 1e-8) * 255).astype(np.uint8)
-        w = max(self.image_label.winfo_width(), 100)
-        h = max(self.image_label.winfo_height(), 100)
-        img = Image.fromarray(hm_norm, mode="L").resize((w, h), Image.Resampling.NEAREST)
-        self.current_image = img
-        self.photo_image = ImageTk.PhotoImage(img)
-        self.image_label.config(image=self.photo_image, text="")
+        self._update_display()
+
+    def set_display_mode(self, mode: str) -> None:
+        self.display_mode.set(mode)
+        self._update_display()
+
+    def _update_display(self) -> None:
+        if self._landscape is None:
+            return
+        L = self._landscape
+        mode = self.display_mode.get()
+        if mode == "height" and L.height_image is not None:
+            self.current_image = L.height_image
+        elif mode == "moisture" and L.moisture_image is not None:
+            self.current_image = L.moisture_image
+        else:
+            self.current_image = L.texture_image
+        self._display_image()
 
     # ── Image display ────────────────────────────────────────────────
 

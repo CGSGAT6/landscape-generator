@@ -1,13 +1,14 @@
 import numpy as np
 from .types import NoiseMap
 
+
 class PerlinNoise:
     def __init__(self, seed: int = 0):
         rng = np.random.default_rng(seed)
         p = rng.permutation(256)
         self.perm = np.concatenate([p, p])
 
-    def _fade(self, t: float) -> float:
+    def _fade(self, t: float | np.ndarray) -> float | np.ndarray:
         return t * t * t * (t * (t * 6 - 15) + 10)
 
     def noise1d(self, x: float) -> float:
@@ -67,11 +68,40 @@ class PerlinNoise:
         f = c + (d - c) * v
         return e + (f - e) * w
 
-    def generate2d(self, width: int, height: int, scale: float = 1.0) -> NoiseMap:
+    # --- Сохранённая старая версия для отчёта ---
+    def generate2d_old(self, width: int, height: int, scale: float = 1.0) -> NoiseMap:
         x = np.linspace(0, width * scale, width, endpoint=False)
         y = np.linspace(0, height * scale, height, endpoint=False)
         data = np.zeros((height, width), dtype=np.float32)
         for i in range(height):
             for j in range(width):
                 data[i, j] = self.noise2d(x[j], y[i])
+        return NoiseMap(data=data, width=width, height=height, seed=0)
+
+    # --- Векторизованная версия (без Python-циклов) ---
+    def _evaluate_grid(self, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
+        xs = xs.astype(np.float32)
+        ys = ys.astype(np.float32)
+        x0 = np.floor(xs).astype(np.int32) & 255
+        y0 = np.floor(ys).astype(np.int32) & 255
+        x1 = (x0 + 1) & 255
+        y1 = (y0 + 1) & 255
+        tx = xs - np.floor(xs)
+        ty = ys - np.floor(ys)
+        u = self._fade(tx)
+        v = self._fade(ty)
+        p = self.perm
+        v00 = p[p[x0] + y0].astype(np.float32) / 255.0
+        v10 = p[p[x1] + y0].astype(np.float32) / 255.0
+        v01 = p[p[x0] + y1].astype(np.float32) / 255.0
+        v11 = p[p[x1] + y1].astype(np.float32) / 255.0
+        a = v00 + (v10 - v00) * u
+        b = v01 + (v11 - v01) * u
+        return a + (b - a) * v
+
+    def generate2d(self, width: int, height: int, scale: float = 1.0) -> NoiseMap:
+        xs = np.linspace(0, width * scale, width, endpoint=False)
+        ys = np.linspace(0, height * scale, height, endpoint=False)
+        x_grid, y_grid = np.meshgrid(xs, ys)
+        data = self._evaluate_grid(x_grid, y_grid)
         return NoiseMap(data=data, width=width, height=height, seed=0)

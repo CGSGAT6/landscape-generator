@@ -253,7 +253,7 @@ class Model:
                     tex_list.append(self.rnd.create_texture(img_path=info['map_Kd']))
 
                 mtl_obj = self.rnd.get_material(
-                    mtl_name,
+                    str(fname) + mtl_name,
                     ka=pyrr.Vector3(info['Ka']),
                     kd=pyrr.Vector3(info['Kd']),
                     ks=pyrr.Vector3(info['Ks']),

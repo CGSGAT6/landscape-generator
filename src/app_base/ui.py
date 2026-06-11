@@ -41,12 +41,25 @@ class AppUI:
         ttk.Checkbutton(toolbar, text="Flat", variable=self.controller.show_flat,
                         command=self.controller.toggle_flat).pack(side=tk.LEFT, padx=4)
 
+        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=8, fill=tk.Y)
+
+        ttk.Label(toolbar, text="2D view:").pack(side=tk.LEFT, padx=(0, 4))
+        for val, label in [("biomes", "Biomes"), ("height", "Height"), ("moisture", "Moisture")]:
+            rb = ttk.Radiobutton(
+                toolbar,
+                text=label,
+                variable=self.controller.display_mode,
+                value=val,
+                command=lambda v=val: self.controller.set_display_mode(v),
+            )
+            rb.pack(side=tk.LEFT, padx=1)
+
     def _build_settings_panel(self, parent: tk.Tk) -> None:
         panel = ttk.LabelFrame(parent, text="Landscape parameters", padding=10)
         panel.pack(side=tk.LEFT, fill=tk.Y, padx=8, pady=8)
 
         ttk.Label(panel, text="Main parameters").pack(anchor=tk.W, pady=(0, 4))
-        self._add_slider(panel, "Detail:", self.controller.detail, 0, 100)
+        self._add_slider(panel, "Grid detail:", self.controller.detail, 1, 20)
         self._add_slider(panel, "Noise decay:", self.controller.noise_decay, 0.0, 1.0)
         self._add_slider(panel, "Mountain height:", self.controller.mountain_height, 0, 100)
         self._add_slider(panel, "Frequency:", self.controller.frequency, 0.01, 0.5)
@@ -65,6 +78,7 @@ class AppUI:
         ttk.Label(panel, text="Visualisation").pack(anchor=tk.W, pady=(0, 4))
         self._add_slider(panel, "Tree density:", self.controller.tree_density, 0, 100)
         self._add_slider(panel, "Power:", self.controller.power, 0.3, 3.0)
+        self._add_slider(panel, "Tex resolution:", self.controller.texture_resolution, 1, 10)
 
         ttk.Separator(panel, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=12)
         generate_btn = ttk.Button(panel, text="GENERATE", command=self.controller.generate_landscape)
@@ -128,18 +142,9 @@ class AppUI:
 
     def _bind_keys(self, root: tk.Tk) -> None:
         c = self.controller
-        root.bind("<Left>", lambda e: c._held_keys.add("left"))
-        root.bind("<KeyRelease-Left>", lambda e: c._held_keys.discard("left"))
-        root.bind("<Right>", lambda e: c._held_keys.add("right"))
-        root.bind("<KeyRelease-Right>", lambda e: c._held_keys.discard("right"))
-        root.bind("<Up>", lambda e: c._held_keys.add("up"))
-        root.bind("<KeyRelease-Up>", lambda e: c._held_keys.discard("up"))
-        root.bind("<Down>", lambda e: c._held_keys.add("down"))
-        root.bind("<KeyRelease-Down>", lambda e: c._held_keys.discard("down"))
-        root.bind("<equal>", lambda e: c._held_keys.add("zoom_in"))
-        root.bind("<KeyRelease-equal>", lambda e: c._held_keys.discard("zoom_in"))
-        root.bind("<minus>", lambda e: c._held_keys.add("zoom_out"))
-        root.bind("<KeyRelease-minus>", lambda e: c._held_keys.discard("zoom_out"))
+        for keysym in ("Left", "Right", "Up", "Down", "equal", "plus", "minus"):
+            root.bind(f"<{keysym}>", c.on_key_press)
+            root.bind(f"<KeyRelease-{keysym}>", c.on_key_release)
         root.bind("<r>", lambda e: c.reload_shaders())
         root.bind("<R>", lambda e: c.reload_shaders())
         root.bind("<a>", lambda e: c.toggle_auto_orbit())

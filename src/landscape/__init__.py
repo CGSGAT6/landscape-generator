@@ -1,11 +1,12 @@
 from .landscape import Landscape
 from .biome import BiomeType
-#from .generate import generate_landscape
 from .generator import Generator
+from .selector import Selector, _make_default_selector
 
 __all__ = [
     "Landscape",
     "BiomeType",
-#    "generate_landscape",
     "Generator",
+    "Selector",
+    "_make_default_selector",
 ]
